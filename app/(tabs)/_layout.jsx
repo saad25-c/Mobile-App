@@ -1,53 +1,56 @@
 import { Tabs } from 'expo-router';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Text } from 'react-native';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs screenOptions={{
-      tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+      tabBarActiveTintColor: '#2563EB',
       headerShown: false,
-      tabBarButton: HapticTab,
     }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Accueil',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>🏠</Text>,
         }}
       />
       <Tabs.Screen
         name="planning"
         options={{
           title: 'Planning',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="calendar" color={color} />,
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>📅</Text>,
         }}
       />
       <Tabs.Screen
         name="absences"
         options={{
           title: 'Absences',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="checkmark.circle.fill" color={color} />,
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>✅</Text>,
         }}
       />
       <Tabs.Screen
         name="documents"
         options={{
           title: 'Documents',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="doc.fill" color={color} />,
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>📄</Text>,
+        }}
+      />
+         <Tabs.Screen
+        name="disponibilites"
+        options={{
+          title: 'Dispos',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>🕐</Text>,
         }}
       />
       <Tabs.Screen
         name="profil"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="person.fill" color={color} />,
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>👤</Text>,
         }}
       />
+   
+
     </Tabs>
   );
 }

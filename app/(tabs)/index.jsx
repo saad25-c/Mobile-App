@@ -3,40 +3,25 @@ import {
   View, Text, StyleSheet, ScrollView,
   ActivityIndicator, Alert
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../../store/authStore';
 
 const API_URL = 'https://teacher-worker.abde-school.workers.dev';
 
 export default function DashboardScreen() {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const { token, user, teacherProfile } = useAuthStore();
   const [groups, setGroups] = useState([]);
   const [todayLessons, setTodayLessons] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!token) return;
     const load = async () => {
-      // Charger les infos depuis AsyncStorage
-      const u = await AsyncStorage.getItem('user');
-      const p = await AsyncStorage.getItem('teacherProfile');
-      if (!u || !p) return;
-      const parsedUser = JSON.parse(u);
-      const parsedProfile = JSON.parse(p);
-      setUser(parsedUser);
-      setProfile(parsedProfile);
-
-      const token = await AsyncStorage.getItem('accessToken');
-      if (!token) return;
-
       try {
-        // Charger les cours du professeur
         const lessonsRes = await fetch(`${API_URL}/api/teacher/lessons`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const lessonsData = await lessonsRes.json();
         const allLessons = lessonsData.data || [];
-
-        // Extraire les groupes uniques depuis les leçons
         const seen = new Set();
         const uniqueGroups = [];
         allLessons.forEach((l) => {
@@ -51,8 +36,6 @@ export default function DashboardScreen() {
           }
         });
         setGroups(uniqueGroups);
-
-        // Filtrer les cours d'aujourd'hui
         const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
         const today = days[new Date().getDay()];
         setTodayLessons(allLessons.filter((l) => l.day === today));
@@ -63,7 +46,7 @@ export default function DashboardScreen() {
       }
     };
     load();
-  }, []);
+  }, [token]);
 
   // Nom affiché de la leçon
   const getLessonName = (lesson) =>
@@ -85,7 +68,7 @@ export default function DashboardScreen() {
         <View>
           <Text style={styles.welcome}>Bonjour</Text>
           <Text style={styles.name}>{user?.prenom} {user?.nom}</Text>
-          <Text style={styles.role}>{profile?.specialty || 'Professeur'}</Text>
+          <Text style={styles.role}>{teacherProfile?.specialty || 'Professeur'}</Text>
         </View>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{user?.prenom?.[0]}{user?.nom?.[0]}</Text>
@@ -96,7 +79,7 @@ export default function DashboardScreen() {
       <View style={styles.statsRow}>
         <StatCard label="Groupes" value={groups.length} color="#2563EB" icon="👥" />
         <StatCard label="Cours aujourd'hui" value={todayLessons.length} color="#16a34a" icon="📚" />
-        <StatCard label="Specialite" value={profile?.specialty || '-'} color="#d97706" icon="🎓" small />
+        <StatCard label="Specialite" value={teacherProfile?.specialty || '-'} color="#d97706" icon="🎓" small />
       </View>
 
       {/* Cours du jour */}
@@ -155,14 +138,14 @@ export default function DashboardScreen() {
         <Text style={styles.sectionTitle}>Mon Profil</Text>
         <View style={styles.profileCard}>
           <Row label="Email" value={user?.email} />
-          <Row label="Salaire fixe" value={profile?.salaryFixe ? `${profile.salaryFixe} DH` : '-'} />
-          <Row label="Taux horaire" value={profile?.hourlyRate ? `${profile.hourlyRate} DH/h` : '-'} />
+          <Row label="Salaire fixe" value={teacherProfile?.salaryFixe ? `${teacherProfile.salaryFixe} DH` : '-'} />
+          <Row label="Taux horaire" value={teacherProfile?.hourlyRate ? `${teacherProfile.hourlyRate} DH/h` : '-'} />
           <Row label="Niveaux" value={[
-            profile?.isPrimaire && 'Primaire',
-            profile?.isCollege && 'College',
-            profile?.isLycee && 'Lycee',
-            profile?.isSoutien && 'Soutien',
-            profile?.isLangues && 'Langues',
+            teacherProfile?.isPrimaire && 'Primaire',
+            teacherProfile?.isCollege && 'College',
+            teacherProfile?.isLycee && 'Lycee',
+            teacherProfile?.isSoutien && 'Soutien',
+            teacherProfile?.isLangues && 'Langues',
           ].filter(Boolean).join(' - ') || '-'} />
         </View>
       </View>

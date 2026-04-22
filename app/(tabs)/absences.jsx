@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   Modal, TextInput, ActivityIndicator, Alert, ScrollView,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import useAuthStore from "../../store/authStore";
 
 const API_URL = "https://teacher-worker.abde-school.workers.dev";
 const REASONS = ["MALADIE", "PERSONNEL", "URGENCE", "FORMATION"];
@@ -12,8 +12,8 @@ const statusColor = (s) => ({ PENDING: "#d97706", APPROVED: "#16a34a", REJECTED:
 const statusLabel = (s) => ({ PENDING: "En attente", APPROVED: "Approuvee", REJECTED: "Refusee" })[s] || s;
 
 export default function AbsencesScreen() {
+  const token = useAuthStore((s) => s.token);
   const [activeTab, setActiveTab] = useState("presences");
-  const [token, setToken] = useState("");
   const [lessons, setLessons] = useState([]);
 
   const [selectedLesson, setSelectedLesson] = useState(null);
@@ -34,15 +34,10 @@ export default function AbsencesScreen() {
   });
 
   useEffect(() => {
-    const load = async () => {
-      const t = await AsyncStorage.getItem("accessToken");
-      if (!t) return;
-      setToken(t);
-      fetchLessons(t);
-      fetchAbsences(t);
-    };
-    load();
-  }, []);
+    if (!token) return;
+    fetchLessons(token);
+    fetchAbsences(token);
+  }, [token]);
 
   const fetchLessons = async (tok) => {
     try {
@@ -126,11 +121,10 @@ export default function AbsencesScreen() {
     }
     setSaving(true);
     try {
-      const currentToken = await AsyncStorage.getItem("accessToken");
       const lesson = lessons.find((l) => l.id === form.lessonId);
       const res = await fetch(`${API_URL}/api/teacher/absence`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${currentToken}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           lessonId: form.lessonId,
           date: form.date,
@@ -144,7 +138,7 @@ export default function AbsencesScreen() {
       if (res.status === 201) {
         setModalVisible(false);
         setForm({ lessonId: "", reason: "MALADIE", comment: "", date: new Date().toISOString().split("T")[0] });
-        fetchAbsences(currentToken);
+        fetchAbsences(token);
       } else {
         Alert.alert("Erreur", typeof data.error === "string" ? data.error : data.message || "Erreur lors de la declaration.");
       }

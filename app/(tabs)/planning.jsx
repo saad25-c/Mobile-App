@@ -3,62 +3,37 @@ import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, Alert
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../../store/authStore';
 
 const API_URL = 'https://teacher-worker.abde-school.workers.dev';
 
 // Jours de la semaine
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const DAY_LABELS = { MON: 'LUN', TUE: 'MAR', WED: 'MER', THU: 'JEU', FRI: 'VEN', SAT: 'SAM', SUN: 'DIM' };
-
-// Créneaux scolaire fixes
 const SLOTS_SCOLAIRE = ['08:30', '10:30', '14:30', '16:30'];
-
-// Créneaux soutien/langue
 const SLOTS_JOUR = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
 const SLOTS_SOIR = ['17:00', '18:00', '19:00', '20:00'];
-
-// Couleur par section
-const sectionColor = (section) => ({
-  SCOLAIRE: '#2563EB',
-  SOUTIEN: '#16a34a',
-  LANGUE: '#d97706',
-  FORMATION: '#7c3aed',
-}[section] || '#2563EB');
+const sectionColor = (section) => ({ SCOLAIRE: '#2563EB', SOUTIEN: '#16a34a', LANGUE: '#d97706', FORMATION: '#7c3aed' }[section] || '#2563EB');
 
 export default function PlanningScreen() {
+  const token = useAuthStore((s) => s.token);
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSoir, setIsSoir] = useState(false);
 
-  // Détecter si scolaire
-  const isScolaire = lessons.length === 0 || lessons.some(
-    (l) => l.group?.level?.section === 'SCOLAIRE'
-  );
-
-  // Créneaux selon le type
-  const slots = isScolaire
-    ? SLOTS_SCOLAIRE
-    : isSoir ? SLOTS_SOIR : SLOTS_JOUR;
+  const isScolaire = lessons.length === 0 || lessons.some((l) => l.group?.level?.section === 'SCOLAIRE');
+  const slots = isScolaire ? SLOTS_SCOLAIRE : isSoir ? SLOTS_SOIR : SLOTS_JOUR;
 
   useEffect(() => {
-    const load = async () => {
-      const token = await AsyncStorage.getItem('accessToken');
-      if (!token) return;
-      try {
-        const res = await fetch(`${API_URL}/api/teacher/lessons`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setLessons(data.data || []);
-      } catch {
-        Alert.alert('Erreur', 'Impossible de charger le planning.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+    if (!token) return;
+    fetch(`${API_URL}/api/teacher/lessons`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => setLessons(data.data || []))
+      .catch(() => Alert.alert('Erreur', 'Impossible de charger le planning.'))
+      .finally(() => setLoading(false));
+  }, [token]);
 
   // Trouver la leçon pour un jour + créneau
   const getLesson = (day, slot) => {
