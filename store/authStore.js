@@ -1,16 +1,15 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
-// Store Zustand pour l'authentification
-// Centralise token, user et teacherProfile pour tous les écrans
+// Token stocké dans SecureStore (chiffré), user/teacherProfile dans AsyncStorage
 const useAuthStore = create((set) => ({
   token: null,
   user: null,
   teacherProfile: null,
 
-  // Charger les données depuis AsyncStorage au démarrage
   loadAuth: async () => {
-    const token = await AsyncStorage.getItem('accessToken');
+    const token = await SecureStore.getItemAsync('accessToken');
     const user = await AsyncStorage.getItem('user');
     const teacherProfile = await AsyncStorage.getItem('teacherProfile');
     set({
@@ -20,17 +19,16 @@ const useAuthStore = create((set) => ({
     });
   },
 
-  // Sauvegarder après login
   setAuth: async (token, user, teacherProfile) => {
-    await AsyncStorage.setItem('accessToken', token);
+    await SecureStore.setItemAsync('accessToken', token);
     await AsyncStorage.setItem('user', JSON.stringify(user));
     await AsyncStorage.setItem('teacherProfile', JSON.stringify(teacherProfile));
     set({ token, user, teacherProfile });
   },
 
-  // Effacer lors du logout
   clearAuth: async () => {
-    await AsyncStorage.clear();
+    await SecureStore.deleteItemAsync('accessToken');
+    await AsyncStorage.multiRemove(['user', 'teacherProfile']);
     set({ token: null, user: null, teacherProfile: null });
   },
 }));

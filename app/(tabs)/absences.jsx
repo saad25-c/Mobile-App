@@ -1,27 +1,39 @@
 import { useEffect, useState } from "react";
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Pressable,
   Modal, TextInput, ActivityIndicator, Alert, ScrollView,
 } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from "../../store/authStore";
+import { API_URL } from "../../constants/api";
+import { Colors } from "../../constants/theme";
 
-const API_URL = "https://teacher-worker.abde-school.workers.dev";
 const REASONS = ["MALADIE", "PERSONNEL", "URGENCE", "FORMATION"];
+// Ajouter après la ligne const REASONS = [...]
+const DAY_FR = {
+  Monday: "Lundi", Tuesday: "Mardi", Wednesday: "Mercredi",
+  Thursday: "Jeudi", Friday: "Vendredi", Saturday: "Samedi", Sunday: "Dimanche",
+  MON: "Lundi", TUE: "Mardi", WED: "Mercredi",
+  THU: "Jeudi", FRI: "Vendredi", SAT: "Samedi", SUN: "Dimanche",
+};
 
-const statusColor = (s) => ({ PENDING: "#d97706", APPROVED: "#16a34a", REJECTED: "#dc2626" })[s] || "#666";
+const translateDay = (day) => DAY_FR[day] || day;
+
+
+const statusColor = (s) => ({ PENDING: Colors.warning, APPROVED: Colors.success, REJECTED: Colors.error })[s] || "#666";
 const statusLabel = (s) => ({ PENDING: "En attente", APPROVED: "Approuvee", REJECTED: "Refusee" })[s] || s;
 
 export default function AbsencesScreen() {
   const token = useAuthStore((s) => s.token);
+  const teacherProfile = useAuthStore((s) => s.teacherProfile);
+
   const [activeTab, setActiveTab] = useState("presences");
   const [lessons, setLessons] = useState([]);
-
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [students, setStudents] = useState([]);
   const [attendances, setAttendances] = useState({});
-  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [loadingStu dents, setLoadingStudents] = useState(false);
   const [savingAttendances, setSavingAttendances] = useState(false);
-
   const [absences, setAbsences] = useState([]);
   const [loadingAbsences, setLoadingAbsences] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -34,20 +46,21 @@ export default function AbsencesScreen() {
   });
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !teacherProfile?.id) return;
     fetchLessons(token);
     fetchAbsences(token);
-  }, [token]);
+  }, [token, teacherProfile]);
 
   const fetchLessons = async (tok) => {
     try {
       const res = await fetch(`${API_URL}/api/teacher/lessons`, {
         headers: { Authorization: `Bearer ${tok}` },
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setLessons(data.data || []);
-    } catch {
-      Alert.alert("Erreur", "Impossible de charger les cours.");
+      const list = Array.isArray(data) ? data : (data.lessons || data.data || []);
+      setLessons(Array.isArray(list) ? list : []);
+    } catch (e) {
     }
   };
 
@@ -58,7 +71,6 @@ export default function AbsencesScreen() {
         headers: { Authorization: `Bearer ${tok}` },
       });
       const data = await res.json();
-      console.log('fetchAbsences:', JSON.stringify(data));
       setAbsences(data.data || []);
     } catch {
       Alert.alert("Erreur", "Impossible de charger les absences.");
@@ -67,25 +79,33 @@ export default function AbsencesScreen() {
     }
   };
 
-  const fetchStudents = async (lesson) => {
-    setSelectedLesson(lesson);
-    setLoadingStudents(true);
-    try {
-      const res = await fetch(`${API_URL}/api/groups/${lesson.groupId}/students`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : [];
-      setStudents(list);
-      const init = {};
-      list.forEach((s) => { init[s.id] = "PRESENT"; });
-      setAttendances(init);
-    } catch {
-      Alert.alert("Erreur", "Impossible de charger les etudiants.");
-    } finally {
-      setLoadingStudents(false);
-    }
-  };
+ const fetchStudents = async (lesson) => {
+  setSelectedLesson(lesson);
+  setLoadingStudents(true);
+  try {
+    console.log('lesson object:', JSON.stringify(lesson));
+    const groupId = lesson.groupId || lesson.group?.id || lesson.id;
+    console.log('groupId used:', groupId);
+    console.log('token used:', token);
+
+    const res = await fetch(`${API_URL}/api/groups/${groupId}/students`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    console.log('students response:', JSON.stringify(data));
+    const list = Array.isArray(data) ? data : (data.students || []);
+    setStudents(list);
+    const init = {};
+    list.forEach((s) => { init[s.id] = "PRESENT"; });
+    setAttendances(init);
+  } catch (e) {
+    console.log('fetchStudents error:', e.message);
+    Alert.alert("Erreur", "Impossible de charger les etudiants.");
+  } finally {
+    setLoadingStudents(false);
+  }
+};
+
 
   const handleSaveAttendances = async () => {
     setSavingAttendances(true);
@@ -95,7 +115,7 @@ export default function AbsencesScreen() {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          lessonId: selectedLesson.id,
+        lessonId: selectedLesson.id,
           date,
           attendances: Object.entries(attendances).map(([studentId, status]) => ({ studentId, status })),
         }),
@@ -130,8 +150,8 @@ export default function AbsencesScreen() {
           date: form.date,
           reason: form.reason,
           comment: form.comment,
-          startTime: lesson.startTime,
-          endTime: lesson.endTime,
+          startTime: lesson?.startTime,
+          endTime: lesson?.endTime,
         }),
       });
       const data = await res.json();
@@ -173,16 +193,20 @@ export default function AbsencesScreen() {
       contentContainerStyle={{ padding: 16 }}
       ListEmptyComponent={<Text style={styles.empty}>Aucun cours trouve.</Text>}
       renderItem={({ item }) => (
-        <TouchableOpacity style={styles.lessonCard} onPress={() => fetchStudents(item)}>
+        <Pressable
+          style={({ pressed }) => [styles.lessonCard, pressed && styles.cardHovered]}
+          onPress={() => fetchStudents(item)}
+        >
           <View style={styles.lessonLeft}>
             <Text style={styles.lessonName}>
-              {item.subject?.name || item.group?.level?.name || item.group?.name || "Cours"}
+              {item.subject?.name || item.group?.name || "Cours"}
             </Text>
-            <Text style={styles.lessonSub}>{item.day} - {item.startTime} - {item.endTime}</Text>
+       <Text style={styles.lessonSub}>{translateDay(item.day)} - {item.startTime} - {item.endTime}</Text>
+
             {item.group?.name && <Text style={styles.lessonSub}>Groupe: {item.group.name}</Text>}
           </View>
           <Text style={styles.arrow}>›</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
     />
   );
@@ -259,15 +283,21 @@ export default function AbsencesScreen() {
                 </View>
                 {item.status === "PENDING" && (
                   <TouchableOpacity onPress={() => handleDeleteAbsence(item.id)}>
-                    <Text style={styles.deleteBtn}>🗑</Text>
+                    <Ionicons name="trash" size={20} color={Colors.error} />
                   </TouchableOpacity>
                 )}
               </View>
-              <Text style={styles.absenceLesson}>
-                {item.lesson?.subject?.name || item.lesson?.group?.name || "Cours"}
-              </Text>
-              <Text style={styles.absenceSub}>Date: {item.date}</Text>
-              <Text style={styles.absenceSub}>Horaire: {item.startTime} - {item.endTime}</Text>
+             <Text style={styles.absenceLesson}>
+              {item.lesson?.subject?.name || item.lesson?.group?.name || "Cours"}
+            </Text>
+              {(item.lesson?.day || item.lesson?.dayOfWeek) && (
+                <Text style={styles.absenceSub}>
+                  Jour: {translateDay(item.lesson?.day || item.lesson?.dayOfWeek)}
+                </Text>
+              )}
+                    <Text style={styles.absenceSub}>Date: {item.date}</Text>
+
+              {item.startTime ? <Text style={styles.absenceSub}>Horaire: {item.startTime} - {item.endTime}</Text> : null}
               <Text style={styles.absenceSub}>Raison: {item.reason}</Text>
               {item.comment ? <Text style={styles.absenceSub}>Commentaire: {item.comment}</Text> : null}
             </View>
@@ -276,7 +306,9 @@ export default function AbsencesScreen() {
       )}
 
       <TouchableOpacity style={styles.saveBtn} onPress={() => setModalVisible(true)}>
-        <Text style={styles.saveBtnText}>+ Declarer une absence</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={styles.saveBtnText}>+ Declarer une absence</Text>
+        </View>
       </TouchableOpacity>
 
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
@@ -285,18 +317,19 @@ export default function AbsencesScreen() {
 
           <Text style={styles.label}>Cours *</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-            {lessons.map((lesson) => (
+            {(Array.isArray(lessons) ? lessons : []).map((lesson) => (
               <TouchableOpacity
                 key={lesson.id}
                 style={[styles.lessonBtn, form.lessonId === lesson.id && styles.lessonBtnActive]}
                 onPress={() => setForm({ ...form, lessonId: lesson.id })}
               >
                 <Text style={[styles.lessonBtnText, form.lessonId === lesson.id && { color: "#fff" }]}>
-                  {lesson.subject?.name || lesson.group?.level?.name || lesson.group?.name || "Cours"}
+                  {lesson.subject?.name || lesson.group?.name || "Cours"}
                 </Text>
-                <Text style={[styles.lessonBtnSub, form.lessonId === lesson.id && { color: "#e0f2fe" }]}>
-                  {lesson.day} {lesson.startTime}
-                </Text>
+               <Text style={[styles.lessonBtnSub, form.lessonId === lesson.id && { color: "#e0f2fe" }]}>
+                {translateDay(lesson.day)} {lesson.startTime}-{lesson.endTime}
+              </Text>
+
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -368,18 +401,19 @@ export default function AbsencesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5" },
-  header: { padding: 20, paddingTop: 60, backgroundColor: "#fff" },
-  title: { fontSize: 22, fontWeight: "bold" },
-  tabs: { flexDirection: "row", backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#eee" },
+  container: { flex: 1, backgroundColor: Colors.gris },
+  header: { padding: 20, paddingTop: 60, backgroundColor: Colors.blanc },
+  title: { fontSize: 22, fontWeight: '800', color: Colors.dark, letterSpacing: 0.3 },
+  tabs: { flexDirection: "row", backgroundColor: Colors.blanc, borderBottomWidth: 1, borderBottomColor: "#eee" },
   tab: { flex: 1, paddingVertical: 12, alignItems: "center" },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: "#2563EB" },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: Colors.teal },
   tabText: { fontSize: 13, color: "#999", fontWeight: "600" },
-  tabTextActive: { color: "#2563EB" },
+  tabTextActive: { color: Colors.teal },
   lessonCard: {
-    backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 10,
-    flexDirection: "row", alignItems: "center", elevation: 1,
+    backgroundColor: Colors.blanc, borderRadius: 16, padding: 16, marginBottom: 10,
+    flexDirection: "row", alignItems: "center", elevation: 2,
   },
+  cardHovered: { backgroundColor: "#f0f4ff", elevation: 4, transform: [{ scale: 0.98 }] },
   lessonLeft: { flex: 1 },
   lessonName: { fontSize: 15, fontWeight: "600", color: "#1e1e1e" },
   lessonSub: { fontSize: 12, color: "#666", marginTop: 2 },
@@ -390,39 +424,38 @@ const styles = StyleSheet.create({
   counter: { flexDirection: "row", gap: 16, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#fff", marginBottom: 4 },
   counterText: { fontSize: 14, fontWeight: "600", color: "#444" },
   studentCard: {
-    backgroundColor: "#fff", borderRadius: 10, padding: 14, marginBottom: 8,
-    flexDirection: "row", alignItems: "center", elevation: 1,
+    backgroundColor: Colors.blanc, borderRadius: 16, padding: 14, marginBottom: 8,
+    flexDirection: "row", alignItems: "center", elevation: 2,
   },
   studentIndex: { fontSize: 13, color: "#999", width: 24 },
   studentName: { flex: 1, fontSize: 15, fontWeight: "500" },
   statusBtns: { flexDirection: "row", gap: 8 },
   statusBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: "#ddd", justifyContent: "center", alignItems: "center" },
-  presentBtn: { backgroundColor: "#16a34a", borderColor: "#16a34a" },
-  absentBtn: { backgroundColor: "#dc2626", borderColor: "#dc2626" },
+  presentBtn: { backgroundColor: Colors.success, borderColor: Colors.success },
+  absentBtn: { backgroundColor: Colors.error, borderColor: Colors.error },
   statusBtnText: { fontSize: 16, fontWeight: "700", color: "#444" },
-  absenceCard: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 10, elevation: 1 },
+  absenceCard: { backgroundColor: Colors.blanc, borderRadius: 16, padding: 16, marginBottom: 10, elevation: 2 },
   absenceHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
   statusBadge: { borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
   statusBadgeText: { color: "#fff", fontSize: 12, fontWeight: "700" },
-  deleteBtn: { fontSize: 20 },
   absenceLesson: { fontSize: 15, fontWeight: "600", marginBottom: 4 },
   absenceSub: { fontSize: 13, color: "#666", marginTop: 2 },
-  saveBtn: { position: "absolute", bottom: 20, left: 16, right: 16, backgroundColor: "#2563EB", borderRadius: 12, padding: 16, alignItems: "center" },
-  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  saveBtn: { position: "absolute", bottom: 20, left: 16, right: 16, backgroundColor: Colors.teal, borderRadius: 16, padding: 16, alignItems: "center" },
+  saveBtnText: { color: Colors.blanc, fontSize: 16, fontWeight: "700" },
   empty: { textAlign: "center", color: "#999", marginTop: 40 },
   modal: { padding: 24, paddingTop: 40 },
   modalTitle: { fontSize: 22, fontWeight: "bold", marginBottom: 24 },
   label: { fontSize: 14, color: "#444", marginBottom: 6, fontWeight: "500" },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 15, marginBottom: 16, backgroundColor: "#fff" },
+  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 16, padding: 12, fontSize: 15, marginBottom: 16, backgroundColor: "#fff" },
   reasonRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  reasonBtn: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  reasonBtn: { borderWidth: 1, borderColor: "#ddd", borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
   reasonBtnActive: { backgroundColor: "#2563EB", borderColor: "#2563EB" },
   reasonBtnText: { fontSize: 12, fontWeight: "600", color: "#444" },
-  cancelBtn: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 8 },
+  cancelBtn: { borderWidth: 1, borderColor: "#ddd", borderRadius: 16, padding: 14, alignItems: "center", marginTop: 8 },
   cancelBtnText: { fontSize: 16, color: "#666" },
-  lessonBtn: { borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 10, marginRight: 8, minWidth: 100, alignItems: "center" },
-  lessonBtnActive: { backgroundColor: "#2563EB", borderColor: "#2563EB" },
-  lessonBtnText: { fontSize: 13, fontWeight: "600", color: "#444" },
+  lessonBtn: { borderWidth: 1, borderColor: "#ddd", borderRadius: 16, padding: 10, marginRight: 8, minWidth: 100, alignItems: "center" },
+  lessonBtnActive: { backgroundColor: Colors.teal, borderColor: Colors.teal },
+  lessonBtnText: { fontSize: 13, fontWeight: "600", color: Colors.dark },
   lessonBtnSub: { fontSize: 11, color: "#999", marginTop: 2 },
-  declareBtn: { backgroundColor: "#2563EB", borderRadius: 8, padding: 14, alignItems: "center", marginBottom: 12, marginTop: 8 },
+  declareBtn: { backgroundColor: Colors.teal, borderRadius: 16, padding: 14, alignItems: "center", marginBottom: 12, marginTop: 8 },
 });

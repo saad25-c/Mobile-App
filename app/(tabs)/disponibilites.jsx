@@ -3,9 +3,13 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   Modal, TextInput, ActivityIndicator, Alert, ScrollView, Switch,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../../store/authStore';
+import { API_URL } from '../../constants/api';
+import { Colors } from '../../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = 'https://teacher-worker.abde-school.workers.dev';
+
+
 
 const DAYS = [
   { label: 'Lundi', value: 1 },
@@ -18,8 +22,11 @@ const DAYS = [
 ];
 
 export default function DisponibilitesScreen() {
-  const [token, setToken] = useState('');
-  const [teacherId, setTeacherId] = useState('');
+
+const token = useAuthStore((s) => s.token);
+const teacherProfile = useAuthStore((s) => s.teacherProfile);
+const teacherId = teacherProfile?.id || '';
+
   const [dispos, setDispos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -33,18 +40,11 @@ export default function DisponibilitesScreen() {
     isAvailable: true,
   });
 
-  useEffect(() => {
-    const load = async () => {
-      const t = await AsyncStorage.getItem('accessToken');
-      const p = await AsyncStorage.getItem('teacherProfile');
-      if (!t || !p) return;
-      const profile = JSON.parse(p);
-      setToken(t);
-      setTeacherId(profile.id);
-      fetchDispos(t, profile.id);
-    };
-    load();
-  }, []);
+ useEffect(() => {
+  if (!token || !teacherId) return;
+  fetchDispos(token, teacherId);
+}, [token, teacherId]);
+
 
   const fetchDispos = async (tok, tid) => {
     setLoading(true);
@@ -133,8 +133,8 @@ export default function DisponibilitesScreen() {
   const getDayLabel = (val) => DAYS.find((d) => d.value === val)?.label || '';
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.container}>
+      <View style={[styles.header  ]}>
         <Text style={styles.title}>Disponibilités</Text>
       </View>
 
@@ -158,20 +158,22 @@ export default function DisponibilitesScreen() {
               </View>
               <View style={styles.cardActions}>
                 <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
-                  <Text style={styles.editBtnText}>✏️</Text>
+                  <Ionicons name="pencil" size={20} color={Colors.teal} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
-                  <Text style={styles.deleteBtnText}>🗑</Text>
+                  <Ionicons name="trash" size={20} color={Colors.error} />
                 </TouchableOpacity>
               </View>
+
             </View>
           )}
         />
       )}
 
-      <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
+     <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
         <Text style={styles.addBtnText}>+ Ajouter</Text>
       </TouchableOpacity>
+
 
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
         <ScrollView contentContainerStyle={styles.modal}>
@@ -237,50 +239,50 @@ export default function DisponibilitesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { padding: 20, paddingTop: 60, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: 'bold' },
-  empty: { textAlign: 'center', color: '#999', marginTop: 40 },
+container: { flex: 1, backgroundColor: Colors.gris },
+header: { padding: 20, paddingTop: 60, backgroundColor: Colors.blanc, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  title: { fontSize: 22, fontWeight: '800', color: Colors.dark, letterSpacing: 0.3 },
+  empty: { textAlign: 'center', color: '#aaa', marginTop: 40 },
   card: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16,
-    marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', elevation: 1,
-  },
+  backgroundColor: Colors.blanc, borderRadius: 16, padding: 16,
+  marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between',
+  alignItems: 'center', elevation: 2, borderLeftWidth: 4, borderLeftColor: Colors.teal,
+},
+
   cardLeft: { flex: 1 },
   badge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 6 },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  cardDay: { fontSize: 15, fontWeight: '700', color: '#1e1e1e' },
-  cardTime: { fontSize: 14, color: '#2563EB', fontWeight: '600', marginTop: 2 },
+  badgeText: { color: Colors.blanc, fontSize: 11, fontWeight: '700' },
+  cardDay: { fontSize: 15, fontWeight: '700', color: Colors.dark },
+  cardTime: { fontSize: 14, color: Colors.teal, fontWeight: '600', marginTop: 2 },
   cardSub: { fontSize: 12, color: '#999', marginTop: 2 },
   cardActions: { flexDirection: 'row', gap: 8 },
   editBtn: { padding: 8 },
-  editBtnText: { fontSize: 20 },
   deleteBtn: { padding: 8 },
-  deleteBtnText: { fontSize: 20 },
   addBtn: {
     position: 'absolute', bottom: 20, left: 16, right: 16,
-    backgroundColor: '#2563EB', borderRadius: 12, padding: 16, alignItems: 'center',
+    backgroundColor: Colors.teal, borderRadius: 16, padding: 16,
+    alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
   },
-  addBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  addBtnText: { color: Colors.blanc, fontSize: 16, fontWeight: '700' },
   modal: { padding: 24, paddingTop: 40 },
-  modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 24 },
-  label: { fontSize: 14, color: '#444', marginBottom: 6, fontWeight: '500' },
+  modalTitle: { fontSize: 22, fontWeight: '800', color: Colors.dark, marginBottom: 24 },
+  label: { fontSize: 13, fontWeight: '700', color: Colors.teal, marginBottom: 6, letterSpacing: 0.4, textTransform: 'uppercase' },
   input: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 8,
-    padding: 12, fontSize: 15, marginBottom: 16, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: '#eee', borderRadius: 16,
+    padding: 13, fontSize: 14, marginBottom: 16, backgroundColor: Colors.gris, color: Colors.dark,
   },
   dayBtn: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    padding: 10, marginRight: 8, minWidth: 80, alignItems: 'center',
+    borderWidth: 1, borderColor: '#eee', borderRadius: 16,
+    padding: 10, marginRight: 8, minWidth: 80, alignItems: 'center', backgroundColor: Colors.blanc,
   },
-  dayBtnActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
-  dayBtnText: { fontSize: 13, fontWeight: '600', color: '#444' },
+  dayBtnActive: { backgroundColor: Colors.teal, borderColor: Colors.teal },
+  dayBtnText: { fontSize: 13, fontWeight: '600', color: Colors.dark },
   switchRow: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginBottom: 16,
   },
-  saveBtn: { backgroundColor: '#2563EB', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12, marginTop: 8 },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  cancelBtn: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 14, alignItems: 'center' },
-  cancelBtnText: { fontSize: 16, color: '#666' },
+  saveBtn: { backgroundColor: Colors.teal, borderRadius: 16, padding: 15, alignItems: 'center', marginBottom: 12, marginTop: 8 },
+  saveBtnText: { color: Colors.blanc, fontSize: 16, fontWeight: '700' },
+  cancelBtn: { borderWidth: 1, borderColor: '#eee', borderRadius: 16, padding: 14, alignItems: 'center' },
+  cancelBtnText: { fontSize: 16, color: '#888' },
 });

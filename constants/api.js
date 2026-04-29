@@ -1,0 +1,1 @@
+export const API_URL = 'https://teacher-worker.abde-school.workers.dev';

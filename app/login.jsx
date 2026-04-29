@@ -1,19 +1,17 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Image,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  ScrollView, StatusBar, Image, Dimensions, Animated, Keyboard,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../store/authStore';
+import { API_URL } from '../constants/api';
+import { Colors } from '../constants/theme';
 
-const API_URL = 'https://teacher-worker.abde-school.workers.dev';
-
-const C = {
-  teal: '#2563EB',
-  dark: '#1e1e1e',
-  gris: '#f5f5f5',
-  blanc: '#ffffff',
-};
+const { height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -22,6 +20,20 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+
+  const heroHeight = useRef(new Animated.Value(height * 0.42)).current;
+
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () =>
+      Animated.timing(heroHeight, { toValue: height * 0.22, duration: 250, useNativeDriver: false }).start()
+    );
+    const hide = Keyboard.addListener('keyboardDidHide', () =>
+      Animated.timing(heroHeight, { toValue: height * 0.42, duration: 250, useNativeDriver: false }).start()
+    );
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) return Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
@@ -51,44 +63,104 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
-        <Image source={require('../assets/images/image.png')} style={s.hero} resizeMode="cover" />
-
-        <View style={s.card}>
-          <Image source={require('../assets/images/logo.png')} style={s.logo} resizeMode="contain" />
-          <Text style={s.title}>Espace Professeur</Text>
-          <Text style={s.subtitle}>Connectez-vous pour accéder à votre espace</Text>
-
-          <Text style={s.label}>Adresse email</Text>
-          <TextInput
-            style={s.input}
-            placeholder="prof@ecole.ma"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholderTextColor="#aaa"
+    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <StatusBar barStyle="light-content" />
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Section 1 : Hero Image ── */}
+        <Animated.View style={{ height: heroHeight }}>
+          <Image
+            source={require('../assets/images/image.png')}
+            style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
           />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.35)', '#fff']}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%' }}
+          />
+        </Animated.View>
 
-          <Text style={s.label}>Mot de passe</Text>
-          <View style={s.pwdWrap}>
+        {/* ── Section 2 : Formulaire ── */}
+        <View style={s.form}>
+
+          {/* Logo + titre */}
+          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            <Image
+              source={require('../assets/images/logo.png')}
+              style={{ width: 100, height: 60, resizeMode: 'contain' }}
+            />
+            <Text style={s.title}>
+              Espace <Text style={s.titleAccent}>Professeur</Text>
+            </Text>
+            <View style={s.divider} />
+            <Text style={s.subtitle}>Connectez-vous pour accéder à votre espace</Text>
+          </View>
+
+          {/* Email */}
+          <Text style={s.label}>Adresse email</Text>
+          <View style={[s.inputWrap, emailFocused && s.inputWrapFocused]}>
+             <Ionicons name="mail-outline" size={20} color={emailFocused ? Colors.teal : '#ccc'} style={{ marginRight: 8 }} />
             <TextInput
-              style={[s.input, { flex: 1, marginBottom: 0 }]}
+              style={s.input}
+              placeholder="prof@ecole.ma"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              placeholderTextColor="#c4c4c4"
+              onFocus={() => setEmailFocused(true)}
+              onBlur={() => setEmailFocused(false)}
+            />
+          </View>
+
+          {/* Password */}
+          <Text style={s.label}>Mot de passe</Text>
+          <View style={[s.inputWrap, passwordFocused && s.inputWrapFocused, { marginBottom: 20 }]}>
+            <Ionicons name="lock-closed-outline" size={20} color={passwordFocused ? Colors.teal : '#ccc'} style={{ marginRight: 8 }} />
+            <TextInput
+              style={[s.input, { flex: 1 }]}
               placeholder="••••••••"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPwd}
-              placeholderTextColor="#aaa"
+              placeholderTextColor="#c4c4c4"
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
             />
             <TouchableOpacity onPress={() => setShowPwd(v => !v)} style={s.eyeBtn}>
-              <Text style={{ fontSize: 18 }}>{showPwd ? '🙈' : '👁️'}</Text>
+              <Ionicons
+                name={showPwd ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={Colors.teal}
+              />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={s.btn} onPress={handleLogin} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Se connecter</Text>}
+          {/* Submit */}
+          <TouchableOpacity
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+            style={[s.btnWrap, loading && { opacity: 0.65 }]}
+          >
+            <LinearGradient
+              colors={[Colors.teal, '#3d9298']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.btn}
+            >
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                 : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="log-in-outline" size={20} color="#fff" />
+                        <Text style={s.btnText}>Se connecter</Text>
+                      </View>              }
+            </LinearGradient>
           </TouchableOpacity>
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -96,20 +168,60 @@ export default function LoginScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.gris },
-  hero: { width: '100%', height: 260 },
-  card: {
-    backgroundColor: C.blanc, marginHorizontal: 20, marginTop: -30,
-    borderRadius: 20, padding: 24, elevation: 6,
-    shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 12,
+  container: { flex: 1, backgroundColor: '#fff' },
+
+  form: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 32,
   },
-  logo: { width: 100, height: 100, alignSelf: 'center', marginBottom: 12 },
-  title: { fontSize: 22, fontWeight: '700', color: C.dark, textAlign: 'center', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#888', textAlign: 'center', marginBottom: 24 },
-  label: { fontSize: 13, fontWeight: '600', color: C.dark, marginBottom: 6 },
-  input: { backgroundColor: C.gris, borderRadius: 10, padding: 13, fontSize: 14, color: C.dark, marginBottom: 14 },
-  pwdWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.gris, borderRadius: 10, marginBottom: 20, paddingRight: 12 },
+
+  title: {
+    fontSize: 24, fontWeight: '800', color: Colors.dark,
+    textAlign: 'center', letterSpacing: 0.5, marginTop: 8,
+  },
+  titleAccent: { color: Colors.teal, fontWeight: '800' },
+  divider: {
+    width: 40, height: 3, backgroundColor: Colors.teal,
+    borderRadius: 4, marginVertical: 10,
+  },
+  subtitle: { fontSize: 13, color: '#9ca3af', textAlign: 'center', letterSpacing: 0.3 },
+
+  label: {
+    fontSize: 13, fontWeight: '600', color: Colors.dark,
+    marginBottom: 6, marginTop: 14,
+  },
+
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1.5, borderColor: '#e5e7eb',
+    borderRadius: 12, paddingHorizontal: 14,
+    backgroundColor: '#fafafa',
+  },
+  inputWrapFocused: {
+    borderWidth: 2,
+    borderColor: Colors.teal,
+    backgroundColor: '#fff',
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 13,
+    fontSize: 15,
+    color: Colors.dark,
+  },
   eyeBtn: { padding: 4 },
-  btn: { backgroundColor: C.teal, borderRadius: 12, padding: 15, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.3 },
+
+  btnWrap: {
+    borderRadius: 13,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: Colors.teal,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  btn: { paddingVertical: 13, alignItems: 'center' },
+  btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16, letterSpacing: 0.3 },
 });

@@ -4,13 +4,14 @@ import {
   Modal, TextInput, ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import useAuthStore from '../../store/authStore';
-
-const API_URL = 'https://teacher-worker.abde-school.workers.dev';
+import { API_URL } from '../../constants/api';
+import { Colors } from '../../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 
 // Types de documents disponibles
 const TYPES = ['COURSE', 'EXERCISE', 'CORRECTION', 'RESOURCE'];
 const TYPE_LABELS = { COURSE: 'Cours', EXERCISE: 'Exercice', CORRECTION: 'Correction', RESOURCE: 'Ressource' };
-const TYPE_COLORS = { COURSE: '#2563EB', EXERCISE: '#16a34a', CORRECTION: '#d97706', RESOURCE: '#7c3aed' };
+const TYPE_COLORS = { COURSE: '#bec5d4', EXERCISE: '#16a34a', CORRECTION: '#d97706', RESOURCE: '#7c3aed' };
 
 export default function DocumentsScreen() {
   const token = useAuthStore((s) => s.token);
@@ -35,6 +36,7 @@ export default function DocumentsScreen() {
     filePath: '',
     fileSize: 1,
     mimeType: 'application/pdf',
+
   });
 
   // Charger teacherId depuis le store au montage
@@ -334,43 +336,41 @@ export default function DocumentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { padding: 20, paddingTop: 60, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: 'bold' },
-  tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  container: { flex: 1, backgroundColor: Colors.gris },
+  header: { padding: 20, paddingTop: 60, backgroundColor: Colors.blanc, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  title: { fontSize: 22, fontWeight: '800', color: Colors.dark, letterSpacing: 0.3 },
+  tabs: { flexDirection: 'row', backgroundColor: Colors.blanc, borderBottomWidth: 1, borderBottomColor: '#eee' },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: '#2563EB' },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: Colors.teal },
   tabText: { fontSize: 13, color: '#999', fontWeight: '600' },
-  tabTextActive: { color: '#2563EB' },
-  empty: { textAlign: 'center', color: '#999', marginTop: 40 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 10, elevation: 1 },
+  tabTextActive: { color: Colors.teal },
+  empty: { textAlign: 'center', color: '#aaa', marginTop: 40 },
+  card: { backgroundColor: Colors.blanc, borderRadius: 16, padding: 16, marginBottom: 10, elevation: 2, borderLeftWidth: 4, borderLeftColor: Colors.teal },
   cardTop: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   typeBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  typeBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  archivedBadge: { backgroundColor: '#f3f4f6', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  archivedBadgeText: { color: '#666', fontSize: 11, fontWeight: '700' },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: '#1e1e1e', marginBottom: 4 },
-  cardSub: { fontSize: 12, color: '#666', marginTop: 2 },
+  typeBadgeText: { color: Colors.blanc, fontSize: 11, fontWeight: '700' },
+  archivedBadge: { backgroundColor: Colors.gris, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  archivedBadgeText: { color: '#888', fontSize: 11, fontWeight: '700' },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: Colors.dark, marginBottom: 4 },
+  cardSub: { fontSize: 12, color: '#888', marginTop: 2 },
   cardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  actionBtn: { backgroundColor: '#eff6ff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  actionBtnText: { fontSize: 12, fontWeight: '600', color: '#2563EB' },
-  addBtn: {
-    position: 'absolute', bottom: 20, left: 16, right: 16,
-    backgroundColor: '#2563EB', borderRadius: 12, padding: 16, alignItems: 'center',
-  },
-  addBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  actionBtn: { backgroundColor: '#e6f7f8', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' },
+  actionBtnText: { fontSize: 12, fontWeight: '600', color: Colors.teal },
+  addBtn: { position: 'absolute', bottom: 20, left: 16, right: 16, backgroundColor: Colors.teal, borderRadius: 16, padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  addBtnText: { color: Colors.blanc, fontSize: 16, fontWeight: '700' },
   modal: { padding: 24, paddingTop: 40 },
-  modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 24 },
-  label: { fontSize: 14, color: '#444', marginBottom: 6, fontWeight: '500' },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, marginBottom: 16, backgroundColor: '#fff' },
+  modalTitle: { fontSize: 22, fontWeight: '800', color: Colors.dark, marginBottom: 24 },
+  label: { fontSize: 13, fontWeight: '700', color: Colors.teal, marginBottom: 6, letterSpacing: 0.4, textTransform: 'uppercase' },
+  input: { borderWidth: 1, borderColor: '#eee', borderRadius: 16, padding: 13, fontSize: 14, marginBottom: 16, backgroundColor: Colors.gris, color: Colors.dark },
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  typeBtn: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
-  typeBtnText: { fontSize: 12, fontWeight: '600', color: '#444' },
-  mimeBtn: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginRight: 8 },
-  mimeBtnActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
-  mimeBtnText: { fontSize: 12, fontWeight: '600', color: '#444' },
-  saveBtn: { backgroundColor: '#2563EB', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 12, marginTop: 8 },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  cancelBtn: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 14, alignItems: 'center' },
-  cancelBtnText: { fontSize: 16, color: '#666' },
+  typeBtn: { borderWidth: 1, borderColor: '#eee', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
+  typeBtnText: { fontSize: 12, fontWeight: '600', color: Colors.dark },
+  mimeBtn: { borderWidth: 1, borderColor: '#eee', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, marginRight: 8 },
+  mimeBtnActive: { backgroundColor: Colors.teal, borderColor: Colors.teal },
+  mimeBtnText: { fontSize: 12, fontWeight: '600', color: Colors.dark },
+  saveBtn: { backgroundColor: Colors.teal, borderRadius: 16, padding: 15, alignItems: 'center', marginBottom: 12, marginTop: 8 },
+  saveBtnText: { color: Colors.blanc, fontSize: 16, fontWeight: '700' },
+  cancelBtn: { borderWidth: 1, borderColor: '#eee', borderRadius: 16, padding: 14, alignItems: 'center' },
+  cancelBtnText: { fontSize: 16, color: '#888' },
 });
+
