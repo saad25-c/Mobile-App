@@ -1,0 +1,10 @@
+{
+  "name": "ecole-app",
+  "private": true,
+  "scripts": {
+    "student": "cd apps\\MonNouveauProjet && npx expo start",
+    "teacher": "cd apps\\teacher && npx expo start",
+    "student:android": "cd apps\\MonNouveauProjet && npx expo run:android",
+    "teacher:android": "cd apps\\teacher && npx expo run:android"
+  }
+}
